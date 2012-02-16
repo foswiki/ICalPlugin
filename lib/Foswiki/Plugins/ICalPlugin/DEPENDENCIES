@@ -1,0 +1,6 @@
+# Dependencies for ICalPlugin
+# Time::ParseDate,>=2003.0211,cpan,Required.
+DateTime,>=0,cpan,Required,
+DateTime::Format::ICal,>=0,cpan,Required,
+Data::ICal,>=0,cpan,Required,
+

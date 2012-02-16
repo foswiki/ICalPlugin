@@ -1,0 +1,49 @@
+%META:TOPICINFO{author="micha" comment="save topic" date="1329154612" format="1.1" reprev="58" version="58"}%
+%META:TOPICPARENT{name="WebHome"}%
+---+!! %TOPIC%
+
+<!--
+   * Set WEBMETADATA = System.EventTopic
+   * Set ICALPLUGIN_CALENDAR = Sandbox.ICalHolidayListDemo.events.ics
+-->
+
+<div class="jqTooltip {extraClass:'bubble', showBody: '--'}">
+%HOLIDAYLIST{
+  month="+0"
+  showstatsum="off"
+  showweekends="on"
+  navenable="on"
+  showmonthheader="on"
+  name=""
+  monthheaderformat="%B %Y"
+}%
+</div>
+
+<!--
+%FORMATICAL{
+  attachment="events.ics"
+  separator="$n"
+  sort="on"
+  class="yellow"
+  start="%URLPARAM{"hlpstart1" default="%GMTIME{"01 $mon $year"}%"}%"
+  span="1 month"
+  eventformat="   * $day $month $year - $percntIF{\"'$location'!=''\" then=\"[[$location][$summary]]\" else=\"$summary\"}$percnt - $description - class($class)"
+  rangeformat="   * $day $month $year - $eday $emonth $eyear - $percntIF{\"'$location'!=''\" then=\"[[$location][$summary]]\" else=\"$summary\"}$percnt - $description - class($class)"
+}%
+-->
+
+<noautolink>
+%RENDERMETADATA{
+  "event"
+  TopicTitle_title="Title"
+}%
+
+%TMPL:P{"metadata::new" meta="event" title="Add event"}%
+%CLEAR%
+
+%INCLUDE{"%SYSTEMWEB%.EventTopic" section="init"}%
+
+%META:FILEATTACHMENT{name="events.ics" attachment="events.ics" attr="" comment="" date="1329154612" size="510" user="micha" version="27"}%
+%META:PREFERENCE{name="NATSKIN_SIDEBAR" title="NATSKIN_SIDEBAR" type="Local" value="off"}%
+%META:EVENT{name="id1" EndDate="18 Jan 2012" Interval="" Month="" MonthDay="" Recurrence="none" StartDate="17 Jan 2012" Summary="" TopicTitle="123" WeekDay="tu, we" YearDay=""}%
+%META:EVENT{name="id2" EndDate="19 Dec 2011" Interval="" Month="" MonthDay="" Recurrence="weekly" StartDate="19 Dec 2011" Summary="in Bensheim" TopicTitle="Treffen mit Notar" WeekDay="tu" YearDay=""}%
