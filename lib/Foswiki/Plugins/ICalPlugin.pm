@@ -39,8 +39,11 @@ sub initPlugin {
 
   Foswiki::Plugins::MetaDataPlugin::registerDeleteHandler('EVENT', sub {
     my ($web, $topic, $record) = @_;
-    my $event = getCore()->getEventFromMetaData($web, $topic, $record);
-    return getCore()->updateCalendar(undef, [$event]);
+
+    my $core = getCore();
+    my $event = $core->getEventFromMetaData($web, $topic, $record);
+
+    return $core->updateCalendar(undef, [$event]);
   });
 
   return 1;

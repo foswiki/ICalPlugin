@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="micha" comment="reprev" date="1329154323" format="1.1" reprev="4" version="4"}%
+%META:TOPICINFO{author="ProjectContributor" comment="reprev" date="1335348584" format="1.1" reprev="4" version="5"}%
 ---+!! %TOPIC%
 %SHORTDESCRIPTION%
 
@@ -9,7 +9,7 @@
 This plugin allows you to do two things:
 
    1 read, parse and format ical files attached to a topic
-   1 cache event data stored in a System.DataForms into an ical file
+   1 cache event data stored in a System.DataForms or !MetaData into an ical file
 
 ICal is a format for storing calendar information in it. This format is supported by almost all calendar applications
 and tools. The most obvious way to get started with this plugin is to open your calendar tool of choise, export
