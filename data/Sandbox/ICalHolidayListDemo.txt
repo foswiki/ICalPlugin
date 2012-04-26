@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" comment="reprev" date="1331385286" format="1.1" reprev="63" version="63"}%
+%META:TOPICINFO{author="ProjectContributor" comment="reprev" date="1335441284" format="1.1" reprev="71" version="71"}%
 %META:TOPICPARENT{name="WebHome"}%
 ---+!! %TOPIC%
 
@@ -38,13 +38,13 @@
   TopicTitle_title="Title"
 }%
 
-%TMPL:P{"metadata::new" meta="event" title="Add event"}%
+%NEWMETADATA{"event" title="Add event"}%
 %CLEAR%
 
 %INCLUDE{"%SYSTEMWEB%.EventTopic" section="init"}%
 
-%META:FILEATTACHMENT{name="events.ics" attachment="events.ics" attr="" comment="" date="1331385286" size="1613" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="events.ics" attachment="events.ics" attr="" comment="" date="1335441284" size="1164" user="ProjectContributor" version="1"}%
 %META:PREFERENCE{name="NATSKIN_SIDEBAR" title="NATSKIN_SIDEBAR" type="Local" value="off"}%
 %META:EVENT{name="id1" EndDate="10 Mar 2012" Interval="" Month="" MonthDay="" Recurrence="weekly" StartDate="6 Mar 2012" Summary="" TopicTitle="CeBIT" WeekDay="tu, we, th, fr, sa" YearDay=""}%
 %META:EVENT{name="id2" EndDate="17 Mar 2012" Interval="" Month="" MonthDay="" Recurrence="daily" StartDate="6 Mar 2012" Summary="" TopicTitle="Test from Foswiki" WeekDay="" YearDay=""}%
-%META:EVENT{name="id3" EndDate="" Interval="" Month="" MonthDay="" Recurrence="none" StartDate="10 Mar 2012" Summary="" TopicTitle="Noch ein Gedicht" WeekDay="" YearDay=""}%
+%META:EVENT{name="id3" EndDate="" Interval="" Month="" MonthDay="" Recurrence="none" StartDate="26 Apr 2012" Summary="" TopicTitle="Noch ein Gedicht" WeekDay="" YearDay=""}%

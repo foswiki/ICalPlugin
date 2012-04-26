@@ -22,7 +22,7 @@ use Foswiki::Func ();
 use Foswiki::Plugins::MetaDataPlugin ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.00';
+our $RELEASE = '1.01';
 our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;

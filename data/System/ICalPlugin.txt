@@ -156,6 +156,7 @@ Finally, the standard foswiki escape variables are expanded:
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  26 Apr 2012 | be more robust against malformed date strings |
 |  25 Apr 2012 | initial release |
 |  Dependencies: | %$DEPENDENCIES% |
 |  Home page: | Foswiki:Extensions/%TOPIC% |

@@ -132,7 +132,7 @@ sub FORMATICAL {
     $theSort = 'off';
   }
   unless ($theSort eq 'off') {
-    @events = sort {$a->{$sortCrit} <=> $b->{$sortCrit}} @events;
+    @events = sort {($a->{$sortCrit}||0) <=> ($b->{$sortCrit}||0)} @events;
   }
 
   writeDebug("### generated ".scalar(@events)." events");
@@ -265,7 +265,14 @@ sub parseTime {
     $time = "$1-$2-$3T$4:$5:$6$7";
   }
 
-  return Foswiki::Time::parseTime($time);
+  my $result = Foswiki::Time::parseTime($time);
+  
+  unless (defined $result) {
+    Foswiki::Func::writeWarning("ICalPlugin::Core - cant parse time '$time'");
+    $result = 0;
+  }
+
+  return $result;
 }
 
 ###############################################################################
