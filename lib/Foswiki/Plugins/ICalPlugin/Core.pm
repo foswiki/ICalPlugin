@@ -679,8 +679,6 @@ sub getEventsFromMetaData {
     my ($formWeb, $formTopic) = Foswiki::Func::normalizeWebTopicName($web, $formWebTopic);
     next unless Foswiki::Func::topicExists($formWeb, $formTopic);
 
-    print STDERR "found form=$formWeb.$formTopic for $name\n";
-
     # now check the TopicType for "EventTopic"
     my $form = new Foswiki::Form($Foswiki::Plugins::SESSION, $formWeb, $formTopic);
 
