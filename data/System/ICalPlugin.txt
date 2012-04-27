@@ -25,6 +25,10 @@ This !DataForm holds all the information, including recurrences of different typ
 Whenever a topic with an !EventTopic !DataForm attached to it is modified or deleted, will the ICalPlugin take care of
 updating the ical file serving as a cache to all !EventTopic information available in the wiki (or part of the wiki).
 
+Note that the EventTopic requires a *TopicType* formfield which holds the list of types this form fulfills. The tag *EventTopic* in it is 
+mandatory for the !ICalPlugin to know that this !DataForm stores VEVENT data. Only then will a !DataForm be harvested to update
+the ical file associated with it.
+
 In addition to normal Foswiki !DataForms, the !ICalPlugin also supports event data to be stored in =%META:EVENT= records
 stored as Foswiki meta data. The format of a =%META:EVENT= record is exactly the same as defined in the !EventTopic.
 Event more, with the use of the Foswiki:Extensions/MetaDataPlugin, the !EventTopic !DataForm definition can be extended
@@ -32,6 +36,15 @@ to your needs and all =%META:EVENT= records will follow as well. This however is
 allowing you to store multiple !DataForm records as meta data records attached to one single topic. So instead
 of storing !EventTopic data one per wiki topic, you can also chose to store _all_ of your event records into a single
 topic in the =%META:EVENT= format.
+
+Finally, !ICalPlugin will update data harvested from !DataForms and event !MetaData into an ical file attached to some topic.
+Specify the address of this file using the =ICALPLUGIN_CALENDAR= preference variable like this:
+
+<verbatim>
+    * Set ICALPLUGIN_CALENDAR = MyWeb.MyTopic.calendar.ics
+</verbatim>
+
+This file can then be integrated into your calendar application on your desktop.
 
 ---++ Examples
 
@@ -156,6 +169,8 @@ Finally, the standard foswiki escape variables are expanded:
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  27 Apr 2012 | expand macros in ICALPLUGIN_CALENDAR variable; \
+                 process all meta data records whose !DataForm have a !TopicType of "EventTopic" |
 |  26 Apr 2012 | be more robust against malformed date strings |
 |  25 Apr 2012 | initial release |
 |  Dependencies: | %$DEPENDENCIES% |
