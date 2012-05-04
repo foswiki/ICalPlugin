@@ -18,12 +18,12 @@ package Foswiki::Plugins::ICalPlugin;
 use strict;
 use warnings;
 
-use Foswiki::Func ();
+use Foswiki::Func                    ();
 use Foswiki::Plugins::MetaDataPlugin ();
 
-our $VERSION = '$Rev$';
-our $RELEASE = '1.10';
-our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
+our $VERSION           = '$Rev$';
+our $RELEASE           = '1.10';
+our $SHORTDESCRIPTION  = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;
 our $baseTopic;
@@ -31,43 +31,49 @@ our $baseWeb;
 
 ###############################################################################
 sub initPlugin {
-  ($baseTopic, $baseWeb) = @_;
+    ( $baseTopic, $baseWeb ) = @_;
 
-  Foswiki::Func::registerTagHandler('FORMATICAL', sub {
-    return getCore()->FORMATICAL(@_);
-  });
+    Foswiki::Func::registerTagHandler(
+        'FORMATICAL',
+        sub {
+            return getCore()->FORMATICAL(@_);
+        }
+    );
 
-  Foswiki::Plugins::MetaDataPlugin::registerDeleteHandler('EVENT', sub {
-    my ($web, $topic, $record) = @_;
+    Foswiki::Plugins::MetaDataPlugin::registerDeleteHandler(
+        'EVENT',
+        sub {
+            my ( $web, $topic, $record ) = @_;
 
-    my $core = getCore();
-    my $event = $core->getEventFromMetaData($web, $topic, $record);
+            my $core = getCore();
+            my $event = $core->getEventFromMetaData( $web, $topic, $record );
 
-    return $core->updateCalendar(undef, [$event]);
-  });
+            return $core->updateCalendar( undef, [$event] );
+        }
+    );
 
-  return 1;
+    return 1;
 }
 
 ###############################################################################
 sub finishPlugin {
-  $core = undef;
+    $core = undef;
 }
 
 ###############################################################################
 sub afterSaveHandler {
-  return getCore()->afterSaveHandler(@_);
+    return getCore()->afterSaveHandler(@_);
 }
 
 ###############################################################################
 sub getCore {
 
-  unless (defined $core) {
-    require Foswiki::Plugins::ICalPlugin::Core;
-    $core = new Foswiki::Plugins::ICalPlugin::Core($baseWeb, $baseTopic);
-  }
+    unless ( defined $core ) {
+        require Foswiki::Plugins::ICalPlugin::Core;
+        $core = new Foswiki::Plugins::ICalPlugin::Core( $baseWeb, $baseTopic );
+    }
 
-  return $core;
+    return $core;
 }
 
 1;
