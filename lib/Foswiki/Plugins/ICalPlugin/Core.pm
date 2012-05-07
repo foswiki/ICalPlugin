@@ -470,7 +470,10 @@ sub afterSaveHandler {
   my @events = ();
   my $event = $this->getEventFromDataForm($meta);
   push @events, $event if defined $event;
-  push @events, $this->getEventsFromMetaData($meta);
+
+  if (Foswiki::Func::getContext()->{MetaDataPluginEnabled}) {
+    push @events, $this->getEventsFromMetaData($meta);
+  }
 
   if (@events) {
     try {

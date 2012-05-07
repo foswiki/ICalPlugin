@@ -39,6 +39,8 @@ sub initPlugin {
     }
   );
 
+  # not sure whether the related context variable is already set during initPlugin
+  # so we use Foswiki::cfg
   if ($Foswiki::cfg{Plugins}{MetaDataPlugin}{Enabled}) {
     require Foswiki::Plugins::MetaDataPlugin();
 
