@@ -27,18 +27,18 @@ our @ISA = ('Data::ICal');
 sub parse_object {
     my ( $self, $object ) = @_;
 
-    my $type = lc( $object->{type} || '' );
+    my $type = lc($object->{type} || '');
 
-    if ( $type eq 'vtodo' ) {
-        return {};
+    if ($type eq 'vtodo') {
+      return {};
     }
 
-    if ( $type eq 'vevent' ) {
-
-# clear all subobjects of events;
-# at least valarms provokes an Insecure dependency in eval while running with -T switch warning
-        $object->{objects} = undef;
+    if ($type eq 'vevent') {
+      # clear all subobjects of events;
+      # at least valarms provokes an Insecure dependency in eval while running with -T switch warning
+      $object->{objects} = undef;
     }
+
 
     return $self->SUPER::parse_object($object);
 }
