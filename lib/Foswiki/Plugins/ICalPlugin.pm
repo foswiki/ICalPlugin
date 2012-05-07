@@ -21,7 +21,7 @@ use warnings;
 use Foswiki::Func ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.10';
+our $RELEASE = '1.11';
 our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;
@@ -42,7 +42,7 @@ sub initPlugin {
   # not sure whether the related context variable is already set during initPlugin
   # so we use Foswiki::cfg
   if ($Foswiki::cfg{Plugins}{MetaDataPlugin}{Enabled}) {
-    require Foswiki::Plugins::MetaDataPlugin();
+    require Foswiki::Plugins::MetaDataPlugin;
 
     Foswiki::Plugins::MetaDataPlugin::registerDeleteHandler(
       'EVENT',
