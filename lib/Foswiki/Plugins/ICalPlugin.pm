@@ -21,7 +21,7 @@ use warnings;
 use Foswiki::Func ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.11';
+our $RELEASE = '1.12';
 our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;

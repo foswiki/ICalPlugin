@@ -318,7 +318,13 @@ sub formatTime {
 sub unfoldRecurrence {
   my ($props, $params, $from, $to) = @_;
 
-  my $start = DateTime::Format::ICal->parse_datetime($props->{dtstart}[0]->value);
+  my $start;
+
+  if (defined $props->{dtstart}) {
+    $start = DateTime::Format::ICal->parse_datetime($props->{dtstart}[0]->value);
+  } else {
+    $start = $from;
+  }
 
   my @events = ();
   my $templateEvent = generateEvent($props);

@@ -169,6 +169,7 @@ Finally, the standard foswiki escape variables are expanded:
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  08 May 2012 | fixed processing of weekly recurrences without a <nop>StartDate |
 |  07 May 2012 | made dependency on Foswiki:Extensions/MetaDataPlugin optional |
 |  27 Apr 2012 | expand macros in ICALPLUGIN_CALENDAR variable; \
                  process all meta data records whose !DataForm have a !TopicType of "EventTopic" |
