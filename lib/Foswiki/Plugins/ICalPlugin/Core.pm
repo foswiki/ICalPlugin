@@ -689,7 +689,14 @@ sub getEventsFromMetaData {
     next unless Foswiki::Func::topicExists($formWeb, $formTopic);
 
     # now check the TopicType for "EventTopic"
-    my $form = new Foswiki::Form($Foswiki::Plugins::SESSION, $formWeb, $formTopic);
+    my $form;
+    try {
+      $form = new Foswiki::Form($Foswiki::Plugins::SESSION, $formWeb, $formTopic);
+    } catch Foswiki::AccessControlException with {
+      # catch but simply bail out
+      writeDebug("access exception reading $formWeb.$formTopic");
+    };
+    next unless $form;
 
     my $topicTypeField = $form->getField('TopicType');
     next unless $topicTypeField;

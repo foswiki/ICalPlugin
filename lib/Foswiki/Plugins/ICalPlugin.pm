@@ -21,7 +21,7 @@ use warnings;
 use Foswiki::Func ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.12';
+our $RELEASE = '1.13';
 our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;
@@ -31,6 +31,8 @@ our $baseWeb;
 ###############################################################################
 sub initPlugin {
   ($baseTopic, $baseWeb) = @_;
+
+  $core = undef;
 
   Foswiki::Func::registerTagHandler(
     'FORMATICAL',
@@ -60,10 +62,6 @@ sub initPlugin {
   return 1;
 }
 
-###############################################################################
-sub finishPlugin {
-  $core = undef;
-}
 
 ###############################################################################
 sub afterSaveHandler {
