@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2012 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2013 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -744,7 +744,7 @@ sub createEvent {
   }
 
   # other datetime properties
-  foreach my $prop qw(created dtstamp last-modified) {
+  foreach my $prop (qw(created dtstamp last-modified)) {
     my $val = $params{$prop};
     next unless defined $val;
     $val = DateTime->from_epoch(epoch => parseTime($params{$prop}));
@@ -752,7 +752,7 @@ sub createEvent {
   }
 
   # optional unique
-  foreach my $prop qw(location organizer priority recurrence-id sequence status transp uid url) {
+  foreach my $prop (qw(location organizer priority recurrence-id sequence status transp uid url)) {
     my $val = $params{$prop};
     $vevent->add_properties($prop=>$val) if defined $val;
   }
