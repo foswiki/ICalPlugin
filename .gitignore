@@ -1,0 +1,9 @@
+*.gz
+*.swp
+ICalPlugin.md5
+ICalPlugin.sha1
+ICalPlugin.tgz
+ICalPlugin.txt
+ICalPlugin.zip
+ICalPlugin_installer
+ICalPlugin_installer.pl

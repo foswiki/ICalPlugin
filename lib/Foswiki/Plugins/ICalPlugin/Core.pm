@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2013 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2014 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -31,11 +31,11 @@ use Error qw(:try);
 use Foswiki::Contrib::JSCalendarContrib ();
 #use Data::Dumper ();
 
-use constant DEBUG => 0; # toggle me
+use constant TRACE => 0; # toggle me
 
 ###############################################################################
 sub writeDebug {
-  print STDERR "ICalPlugin::Core - $_[0]\n" if DEBUG;
+  print STDERR "ICalPlugin::Core - $_[0]\n" if TRACE;
 }
 
 ###############################################################################

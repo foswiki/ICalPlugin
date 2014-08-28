@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" comment="autosave" date="1356278772" format="1.1" version="6"}%
+%META:TOPICINFO{author="ProjectContributor" comment="autosave" date="1356278772" format="1.1" version="1"}%
 ---+!! %TOPIC%
 %SHORTDESCRIPTION%
 
@@ -164,11 +164,12 @@ Finally, the standard foswiki escape variables are expanded:
 -->
 
 |  Author(s): | Michael Daum|
-|  Copyright: | &copy; 2011-2013 Michael Daum http://michaeldaumconsulting.com |
+|  Copyright: | &copy; 2011-2014 Michael Daum http://michaeldaumconsulting.com |
 |  License: | [[http://www.gnu.org/licenses/gpl.html][GPL (Gnu General Public License)]] |
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  28 Aug 2014 | depend on !MetaDataPlugin >= 4.0 |
 |  07 Nov 2013 | fixed use of deprecated perl syntax in foreach loops |
 |  21 Jun 2012 | fixed unintended redirect after save when accessing a view restricted data form |
 |  08 May 2012 | fixed processing of weekly recurrences without a <nop>StartDate |

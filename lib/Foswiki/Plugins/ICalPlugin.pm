@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2013 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2014 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,8 @@ use warnings;
 
 use Foswiki::Func ();
 
-our $VERSION = '1.14';
-our $RELEASE = '1.14';
+our $VERSION = '1.20';
+our $RELEASE = '1.20';
 our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;
@@ -47,14 +47,15 @@ sub initPlugin {
     require Foswiki::Plugins::MetaDataPlugin;
 
     Foswiki::Plugins::MetaDataPlugin::registerDeleteHandler(
-      'EVENT',
       sub {
-        my ($web, $topic, $record) = @_;
+        my ($web, $topic, $key, $record) = @_;
 
-        my $core = getCore();
-        my $event = $core->getEventFromMetaData($web, $topic, $record);
+        if ($key eq 'EVENT') {
+          my $core = getCore();
+          my $event = $core->getEventFromMetaData($web, $topic, $record);
 
-        return $core->updateCalendar(undef, [$event]);
+          return $core->updateCalendar(undef, [$event]);
+        }
       }
     );
   }
