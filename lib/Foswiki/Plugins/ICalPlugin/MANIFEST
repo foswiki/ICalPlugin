@@ -1,7 +1,12 @@
+!noci
 data/Sandbox/ICalHolidayListDemo.txt 0644
 data/System/EventTopic.txt 0644
 data/System/ICalPlugin.txt 0644
+lib/Foswiki/Plugins/ICalPlugin/Calendar.pm 0644
 lib/Foswiki/Plugins/ICalPlugin/Config.spec 0644
 lib/Foswiki/Plugins/ICalPlugin/Core.pm 0644
 lib/Foswiki/Plugins/ICalPlugin/DataICal.pm 0644
+lib/Foswiki/Plugins/ICalPlugin/DEPENDENCIES 0644
+lib/Foswiki/Plugins/ICalPlugin/Event.pm 0644
 lib/Foswiki/Plugins/ICalPlugin.pm 0644
+pub/Sandbox/ICalHolidayListDemo/events.ics 0644

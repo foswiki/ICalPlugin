@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2014 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2018 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,17 +20,14 @@ use warnings;
 
 use Foswiki::Func ();
 
-our $VERSION = '1.20';
-our $RELEASE = '1.20';
+our $VERSION = '2.00';
+our $RELEASE = '11 Jun 2018';
 our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;
-our $baseTopic;
-our $baseWeb;
 
 ###############################################################################
 sub initPlugin {
-  ($baseTopic, $baseWeb) = @_;
 
   $core = undef;
 
@@ -60,9 +57,20 @@ sub initPlugin {
     );
   }
 
+  Foswiki::Func::registerRESTHandler('purgeCache', sub { return getCore()->purgeCache(@_); },
+    authenticate => 1,
+    validate => 0,
+    http_allow => 'GET,POST',
+  );
+
+  Foswiki::Func::registerRESTHandler('clearCache', sub { return getCore()->clearCache(@_); },
+    authenticate => 1,
+    validate => 0,
+    http_allow => 'GET,POST',
+  );
+
   return 1;
 }
-
 
 ###############################################################################
 sub afterSaveHandler {
@@ -74,7 +82,7 @@ sub getCore {
 
   unless (defined $core) {
     require Foswiki::Plugins::ICalPlugin::Core;
-    $core = new Foswiki::Plugins::ICalPlugin::Core($baseWeb, $baseTopic);
+    $core = Foswiki::Plugins::ICalPlugin::Core->new();
   }
 
   return $core;

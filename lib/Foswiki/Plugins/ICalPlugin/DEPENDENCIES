@@ -3,3 +3,5 @@ DateTime::Format::ICal,>=0,cpan,Required
 Data::ICal,>=0,cpan,Required
 DateTime::Set,>=0,cpan,Required
 Foswiki::Plugins::MetaDataPlugin,>=4.0,perl,Optional
+ONLYIF ( $Foswiki::Plugins::VERSION < 2.6)
+Foswiki::Plugins::TopicTitlePlugin,>1.00,perl,Required for Foswiki < 2.2

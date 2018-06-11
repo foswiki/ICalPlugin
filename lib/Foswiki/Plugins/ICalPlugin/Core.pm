@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2014 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2018 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -22,110 +22,98 @@ use Foswiki::Func ();
 use Foswiki::Sandbox ();
 use Foswiki::Form ();
 use Foswiki::Plugins ();
-use Foswiki::Plugins::ICalPlugin::DataICal ();
+use Foswiki::Plugins::ICalPlugin::Calendar ();
 use DateTime::Duration ();
 use DateTime::Format::ICal ();
 use DateTime::Span ();
 use Data::ICal::Entry::Event ();
 use Error qw(:try);
-use Foswiki::Contrib::JSCalendarContrib ();
-#use Data::Dumper ();
 
 use constant TRACE => 0; # toggle me
-
-###############################################################################
-sub writeDebug {
-  print STDERR "ICalPlugin::Core - $_[0]\n" if TRACE;
-}
+#use Data::Dump qw(dump);
 
 ###############################################################################
 sub new {
-  my ($class, $baseWeb, $baseTopic) = @_;
+  my $class = shift;
 
   my $this = bless({
-    baseWeb=>$baseWeb,
-    baseTopic=>$baseTopic,
+    @_
   }, $class);
 
-  Foswiki::Contrib::JSCalendarContrib::addHEAD("foswiki");
-
   return $this;
-}
-
-###############################################################################
-sub inlineError {
-  my $msg = shift;
-  die "wot?" unless defined $msg;
-  return '<span class="foswikiAlert">'.$msg.'</span>';
 }
 
 ###############################################################################
 sub FORMATICAL {
   my ($this, $session, $params, $theTopic, $theWeb) = @_;
 
-  #writeDebug("### called FORMATICAL()");
+  #_writeDebug("### called FORMATICAL()");
 
-  my $web = $params->{web} || $this->{baseWeb};
-  my $topic = $params->{topic} || $this->{baseTopic};
+  my $web = $params->{web} || $session->{webName};
+  my $topic = $params->{topic} || $session->{topicName};
   my $attachment = $params->{attachment} || 'calendar.ics';
   my $text = $params->{_DEFAULT} || $params->{text};
+  my $url = $params->{url};
   my $skip = $params->{skip} || 0;
   my $limit = $params->{limit};
 
   ($web, $topic) = Foswiki::Func::normalizeWebTopicName($web, $topic);
 
-  return inlineError("topic $web.$topic does not exist") 
+  return _inlineError("topic $web.$topic does not exist") 
     unless Foswiki::Func::topicExists($web, $topic);
 
-  my $cal;
-  if (defined $text) { 
-    $cal = Foswiki::Plugins::ICalPlugin::DataICal->new(data=>$text);
+  my $error;
+  my $request = Foswiki::Func::getRequestObject();
+  my $expire = $params->{expire};
+  my $doRefresh = $request->param("refresh") || '';
+
+  my $cal = Foswiki::Plugins::ICalPlugin::Calendar->new();
+  $cal->clearCache() if $doRefresh =~ /^(on|ical)$/;
+
+  if (defined $url) {
+    # get calendar from url
+    my $data;
+    try {
+      $cal->getDataFromUrl($url, $expire);
+    } catch Error::Simple with {
+      $error = shift->{-text};
+    }
+  } elsif (defined $text) { 
+    # get calendar from inline text
+    $cal->parseData($text, undef, $expire);
   } else {
-    return inlineError("calendar $attachment not found at $web.$topic")
+    # get calendar from attachment
+    return _inlineError("calendar $attachment not found at $web.$topic")
       unless Foswiki::Func::attachmentExists($web, $topic, $attachment);
 
-    my $error;
     try {
       $text = Foswiki::Func::readAttachment($web, $topic, $attachment);
     } catch Foswiki::AccessControlException with {
       $error = shift->{-text};
     };
 
-    return inlineError($error) if defined $error;
-
-    my $data = Foswiki::Func::readAttachment($web, $topic, $attachment);
-    $cal = Foswiki::Plugins::ICalPlugin::DataICal->new(data=>$data);
-  }
-
-  return '' unless $cal;
-
-  return $cal->as_string if Foswiki::Func::isTrue($params->{raw});
-
-  my ($queryStart, $queryEnd) = getQuerySpan($params);
-  writeDebug("querySpan start=$queryStart, end=$queryEnd");
-
-  my @events = ();
-  foreach my $entry (@{ $cal->entries() }) {
-    next unless $entry->ical_entry_type() eq 'VEVENT';
-    my $props = $entry->properties();
-
-    my $recurrence = ($entry->property("rrule")||$entry->property("rdate"));
-    if ($recurrence) {
-      my @recurrence = unfoldRecurrence($props, $params, $queryStart, $queryEnd);
-      #writeDebug("### generated ".scalar(@recurrence)." events from recurrence ".$recurrence->[0]->value);
-      push @events, @recurrence;
-    } else {
-      push @events, generateEvent($props);
+    unless (defined $error) {
+      my $data = Foswiki::Func::readAttachment($web, $topic, $attachment);
+      $cal->parseData($data, "$web.$topic.$attachment", $expire);
     }
   }
+  return _inlineError($error) if defined $error;
+  return '' unless $cal;
+
+  return $cal->ical->as_string if Foswiki::Func::isTrue($params->{raw});
+
+  my $querySpan = $this->getQuerySpan($params);
+  my @events = $cal->getEvents($querySpan);
+  _writeDebug("### parsed ".scalar(@events)." events");
+
 
   # sort events
   my $sortCrit;
   my $theSort = $params->{sort} || 'off';
   if ($theSort eq 'start' || $theSort eq 'on') {
-    $sortCrit = '_startepoch';
+    $sortCrit = 'start';
   } elsif ($theSort eq 'end') {
-    $sortCrit = '_endepoch';
+    $sortCrit = 'end';
 #  } elsif ($theSort eq 'modified') {
 #    $sortCrit = '_modifiedepoch';
 #  } elsif ($theSort eq 'created') {
@@ -137,44 +125,17 @@ sub FORMATICAL {
     @events = sort {($a->{$sortCrit}||0) <=> ($b->{$sortCrit}||0)} @events;
   }
 
-  writeDebug("### generated ".scalar(@events)." events");
-
   my @result = ();
   my $index = 0;
-  my $queryStartEpoch = $queryStart->epoch;
-  my $queryEndEpoch = $queryEnd->epoch;
-  #print STDERR "queryStartEpoch=$queryStartEpoch, queryEndEpoch=$queryEndEpoch\n";
+  #print STDERR "querySpan: start=".$querySpan->start.", end=".$querySpan->end."\n";
   foreach my $event (@events) {
     $index++;
 
-#   print STDERR "startepoch=$event->{_startepoch}\n" if defined $event->{_startepoch};
-#   print STDERR "endepoch=$event->{_endepoch}\n" if defined $event->{_endepoch};
-#
-#   if (defined $event->{_startepoch}) {
-#     if ($event->{_startepoch} > $queryEndEpoch) {
-#       print STDERR "startepoch ".$event->{dtstart}." is > queryEndEpoch ... out\n";
-#     } else {
-#       print STDERR "startepoch ".$event->{dtstart}."is <= queryEndEpoch\n";
-#     }
-#   }
-#   if (defined $event->{_endepoch}) {
-#     if ($event->{_endepoch} < $queryStartEpoch) {
-#       print STDERR "endepoch ".($event->{dtend}||'')." is < queryStartEpoch ... out\n";
-#     } else {
-#       print STDERR "endepochh ".($event->{dtend}||'')."is >= queryStartEpoch\n";
-#     }
-#   }
-
-    next if (defined $event->{_startepoch} && $event->{_startepoch} > $queryEndEpoch) ||
-            (defined $event->{_endepoch} && $event->{_endepoch} < $queryStartEpoch);
-
+    _writeDebug("### $index: summary=$event->{summary}, start=".$event->start.", end=".$event->end) if TRACE;
     next unless $index > $skip;
-
-    if (defined $limit) {
-      last if $index > $skip+$limit;
-    }
+    last if $limit && $index > $skip+$limit;
  
-    my $line = formatEvent($event, $params);
+    my $line = $event->format($params);
     #print STDERR "line=$line\n";
 
     # add params
@@ -187,16 +148,18 @@ sub FORMATICAL {
     # clean up
     $line =~ s/\$index/$index/g;
     $line =~ s/\$(?:location|dtstart|start|dtend|until|end|last-modified|modified|description|attendee|organizer|rrule|rdate|summary)//g;
-    $line =~ s/\$[mec]?(seco?n?d?s?|minu?t?e?s?|hour?s?|day|w(eek|day)|dow|mo(?:nt?h?)?|ye(?:ar)?)(\(\)|(?=\W|$))//g;
+    $line =~ s/\$[mec]?(seco?n?d?s?|minu?t?e?s?|hour?s?|day|w(eek|day)|dow|mo(?:nt?h?)?|ye(?:ar)?)//g;
 
     push @result, $line;
   }
+  _writeDebug("### extracted ".scalar(@result)." events");
 
   return '' unless @result;
 
   my $theHeader = $params->{header} || '';
   my $theFooter = $params->{footer} || '';
-  my $theSeparator = $params->{separator} || '';
+  my $theSeparator = $params->{separator};
+  $theSeparator = '$n' unless defined $theSeparator;
 
   my $result = $theHeader.join($theSeparator, @result).$theFooter;
 
@@ -205,43 +168,6 @@ sub FORMATICAL {
   $result =~ s/\$dollar/\$/g;
 
   return $result;
-}
-
-###############################################################################
-sub formatEvent {
-  my ($event, $params) = @_;
-
-  my $format = $params->{format};
-  $format = $params->{eventformat} if defined $params->{eventformat};
-  $format = '   * $day $mon $year - $location - $summary' unless defined $format;
-  
-  if (defined $params->{rangeformat} && defined $event->{end} && $event->{start} != $event->{end}) {
-    $format = $params->{rangeformat};
-    writeDebug("found a range: start=$event->{start} - end=$event->{end}: $event->{summary}");
-  }
-
-  #writeDebug("### called formatEvent($format)");
-
-  while (my ($key, $val) = each %$event) {
-    next unless defined $val && defined $val;
-    next if $key =~ /^_/;
-    $format =~ s/\$$key/$val/g;
-
-    #writeDebug("$key=$val");
-    if ($key eq 'created') {
-      $format = formatTime($val, $format, "c");
-    } elsif ($key eq 'start') {
-      $format = formatTime($val, $format);
-    } elsif ($key eq 'dtend') {
-      $format = formatTime($val, $format, "e");
-    } elsif ($key eq 'last-modified') {
-      $format = formatTime($val, $format, "m");
-    }
-  }
-
-  #writeDebug("### result = $format");
-
-  return $format;
 }
 
 ###############################################################################
@@ -278,153 +204,15 @@ sub parseTime {
 }
 
 ###############################################################################
-sub formatTime {
-  my ($time, $formatString, $prefix, $outputTimeZone) = @_;
-
-  return '' unless defined $formatString;
-
-  my $epochSeconds = parseTime($time);
-  $outputTimeZone ||= $Foswiki::cfg{DisplayTimeValues};
-
-  $prefix ||= '';
-
-  my ($sec, $min, $hour, $day, $mon, $year, $wday, $yday, $isdst);
-  if ($outputTimeZone eq 'servertime') {
-    ($sec, $min, $hour, $day, $mon, $year, $wday, $yday, $isdst) = localtime($epochSeconds);
-  } else {
-    ($sec, $min, $hour, $day, $mon, $year, $wday, $yday) = gmtime($epochSeconds);
-  }
-
-  #writeDebug("formatTime($time), year=$year, mon=$mon, day=$day");
-
-  my $value = $formatString;
-  $value =~ s/\$${prefix}seco?n?d?s?/sprintf('%.2u',$sec)/gei;
-  $value =~ s/\$${prefix}minu?t?e?s?/sprintf('%.2u',$min)/gei;
-  $value =~ s/\$${prefix}hour?s?/sprintf('%.2u',$hour)/gei;
-  $value =~ s/\$${prefix}day/sprintf('%.2u',$day)/gei;
-  $value =~ s/\$${prefix}wday/$Foswiki::Time::WEEKDAY[$wday]/gi;
-  $value =~ s/\$${prefix}dow/$wday/gi;
-  $value =~ s/\$${prefix}week/Foswiki::Time::_weekNumber($wday, $yday, $year + 1900)/egi;
-  $value =~ s/\$${prefix}mont?h?/$Foswiki::Time::ISOMONTH[$mon]/gi;
-  $value =~ s/\$${prefix}mo/sprintf('%.2u',$mon+1)/gei;
-  $value =~ s/\$${prefix}year?/sprintf('%.4u',$year + 1900)/gei;
-  $value =~ s/\$${prefix}ye/sprintf('%.2u',$year%100)/gei;
-  $value =~ s/\$${prefix}epoch/$epochSeconds/gi;
-
-  return $value;
-}
-
-###############################################################################
-sub unfoldRecurrence {
-  my ($props, $params, $from, $to) = @_;
-
-  my $start;
-
-  if (defined $props->{dtstart}) {
-    $start = DateTime::Format::ICal->parse_datetime($props->{dtstart}[0]->value);
-  } else {
-    $start = $from;
-  }
-
-  my @events = ();
-  my $templateEvent = generateEvent($props);
-
-  if ($props->{rrule}) {
-    foreach my $rule (@{$props->{rrule}}) {
-      my $val = $rule->value;
-      #print STDERR "val=$val\n";
-
-      my $recur = DateTime::Format::ICal->parse_recurrence(
-        recurrence => $val,
-        dtstart => $start
-      );
-
-      my $span = DateTime::Span->from_datetimes(
-        start => $from,
-        end => $to
-      );
-
-
-      my $iter = $recur->iterator(span => $span);
-      while (my $dt = $iter->next) {
-        my $dtEpochSeconds = $dt->epoch();
-
-        my %dtEvent = %$templateEvent;
-        $dtEvent{start} = $dt;
-        $dtEvent{dtstart} = $dt;
-        delete $dtEvent{dtend};
-        delete $dtEvent{end};
-        push @events, \%dtEvent;
-      }
-    }
-  }
-
-  if ($props->{rdate}) {
-    foreach my $rule (@{$props->{rdate}}) {
-      my $val = $rule->value;
-      $val = DateTime::Format::ICal->parse_datetime($val);
-
-      my %dtEvent = %$templateEvent;
-      $dtEvent{start} = $val;
-      $dtEvent{dtstart} = $val;
-      delete $dtEvent{dtend};
-      delete $dtEvent{end};
-      push @events, \%dtEvent;
-    }
-  }
-
-  return @events;
-}
-
-###############################################################################
-sub generateEvent {
-  my ($props, %override) = @_;
-
-  my %event = ();
-  foreach my $key (keys %$props) {
-    my $property = $props->{$key}[0];
-
-    my $val = (defined $override{$key}) ? $override{$key} : $property->value;
-    $val =~ s/^mailto://i;
-
-    if ($key eq 'description') {
-      $val =~ s/</&lt;/g;
-      $val =~ s/>/&gt;/g;
-      $val =~ s/\n/<br \/>/g;
-      $event{$key} = $val;
-
-    } elsif ($key eq 'created') {
-      $event{created} = DateTime::Format::ICal->parse_datetime($val);
-      #$event{_createdepoch} = $event{created}->epoch();
-    } elsif ($key eq 'dtstart') {
-      $event{start} = $event{$key} = DateTime::Format::ICal->parse_datetime($val);
-      $event{_startepoch} = $event{start}->epoch();
-    } elsif ($key eq 'dtend') {
-      $event{end} = $event{$key} = DateTime::Format::ICal->parse_datetime($val);
-      $event{_endepoch} = $event{end}->epoch();
-    } elsif ($key eq 'last-modified') {
-      $event{modified} = $event{$key} = DateTime::Format::ICal->parse_datetime($val);
-      #$event{_modifiedepoch} = $event{modified}->epoch();
-    } else {
-      $event{$key} = $val;
-    }
-  }
-
-  return \%event;
-}
-
-###############################################################################
 sub getQuerySpan {
-  my $params = shift;
+  my ($this, $params) = @_;
 
   my $theStart = $params->{start};
-
   my $dtStart = DateTime->from_epoch(epoch => (defined $theStart)?parseTime($theStart):time);
 
   my $theSpan = $params->{span} || '1 month';
   my $theEnd = $params->{end};
 
-  my $querySpan;
   my $dtEnd;
   if (defined $theEnd) {
     $dtEnd = DateTime->from_epoch(epoch => parseTime($theEnd));
@@ -455,12 +243,12 @@ sub getQuerySpan {
     );
   }
 
-  $querySpan = DateTime::Span->from_datetimes(
+  #_writeDebug("query span: start=".$dtStart.", end=".$dtEnd) if TRACE;
+
+  return DateTime::Span->from_datetimes(
     start=>$dtStart,
     end=>$dtEnd
   );
-
-  return ($querySpan->start, $querySpan->end);
 }
 
 ###############################################################################
@@ -471,7 +259,7 @@ sub afterSaveHandler {
     ($meta) = Foswiki::Func::readTopic($web, $topic);
   }
 
-  writeDebug("called afterSaveHandler");
+  _writeDebug("called afterSaveHandler");
 
   my @events = ();
   my $event = $this->getEventFromDataForm($meta);
@@ -489,7 +277,7 @@ sub afterSaveHandler {
       print STDERR "ERROR: can't update calendar - " . $error . "\n";
     }
   } else {
-    writeDebug("nothing to update");
+    _writeDebug("nothing to update");
   }
 }
 
@@ -497,7 +285,7 @@ sub afterSaveHandler {
 sub updateCalendar {
   my ($this, $newEvents, $deleteEvents) = @_;
 
-  writeDebug("called updateCalendar");
+  _writeDebug("called updateCalendar");
 
   my ($calendarWeb, $calendarTopic, $calendarAttachment) = $this->getCalendarAttachment;
   return unless defined $calendarWeb;
@@ -521,7 +309,7 @@ sub updateCalendar {
     }
   }
 
-  my $newCal = Foswiki::Plugins::ICalPlugin::DataICal->new(
+  my $newCal = Data::ICal->new(
       data => 
 "BEGIN:VCALENDAR
 PRODID:-//Foswiki///ICalPlugin//$Foswiki::Plugins::ICalPlugin::RELEASE
@@ -537,7 +325,7 @@ END:VCALENDAR
     if ($data) {
       $data = Foswiki::Sandbox::untaintUnchecked($data); # SMELL: some libs barf on tainted strings
 
-      my $oldCal = Foswiki::Plugins::ICalPlugin::DataICal->new(data => $data); # SMELL: do we still need this wrapper?
+      my $oldCal = Data::ICal->new(data => $data); # SMELL: do we still need this wrapper?
 
       if (ref($oldCal) eq 'Class::ReturnValue') {
         print STDERR "ERROR:" . $oldCal->error_message . "\n"; # ERROR ... but keep on going
@@ -570,7 +358,7 @@ END:VCALENDAR
 
   close $fh;
 
-  #print STDERR "cal=".Data::Dumper->Dump([$newCal])."\n";
+  #print STDERR "cal=".dump($newCal)."\n";
   return 1; # success
 }
 
@@ -594,7 +382,7 @@ sub getCalendarAttachment {
     }
   }
 
-  writeDebug("using calendar at web=$this->{calendarWeb} topic=$this->{calendarTopic}, attachment=$this->{calendarAttachment}");
+  _writeDebug("using calendar at web=$this->{calendarWeb} topic=$this->{calendarTopic}, attachment=$this->{calendarAttachment}");
 
   return ($this->{calendarWeb}, $this->{calendarTopic}, $this->{calendarAttachment});
 }
@@ -606,7 +394,7 @@ sub getEventFromDataForm {
 
   #print STDERR "called getEventFromDataForm\n";
 
-  my $topicType = getField($meta, 'TopicType');
+  my $topicType = $this->getField($meta, 'TopicType');
   return unless defined $topicType;
 
   #print STDERR "topicType=$topicType\n";
@@ -620,17 +408,17 @@ sub getEventFromDataForm {
   return $this->createEvent(
     uid => $uid,
     location => Foswiki::Func::getScriptUrl($web, $topic, 'view'),
-    summary => getTopicTitle($meta),
-    description => getField($meta, "Summary"),
-    start => getField($meta, 'StartDate'),
-    end => getField($meta, 'EndDate'),
-    freq => getField($meta, 'Recurrence') || 'none',
-    weekday => getField($meta, 'WeekDay'),
-    montday => getField($meta, 'MonthDay'),
-    month => getField($meta, 'Month'),
-    yearday => getField($meta, 'YearDay'),
-    interval => getField($meta, 'Interval'),
-    #count => getField($meta, 'RecurrenceCount'), # unusede for now
+    summary => Foswiki::Plugins::Func::getTopicTitle($web, $topic, undef, $meta),
+    description => $this->getField($meta, "Summary"),
+    start => $this->getField($meta, 'StartDate'),
+    end => $this->getField($meta, 'EndDate'),
+    freq => $this->getField($meta, 'Recurrence') || 'none',
+    weekday => $this->getField($meta, 'WeekDay'),
+    montday => $this->getField($meta, 'MonthDay'),
+    month => $this->getField($meta, 'Month'),
+    yearday => $this->getField($meta, 'YearDay'),
+    interval => $this->getField($meta, 'Interval'),
+    #count => $this->getField($meta, 'RecurrenceCount'), # unusede for now
   );
 }
 
@@ -694,7 +482,7 @@ sub getEventsFromMetaData {
       $form = new Foswiki::Form($Foswiki::Plugins::SESSION, $formWeb, $formTopic);
     } catch Foswiki::AccessControlException with {
       # catch but simply bail out
-      writeDebug("access exception reading $formWeb.$formTopic");
+      _writeDebug("access exception reading $formWeb.$formTopic");
     };
     next unless $form;
 
@@ -817,13 +605,13 @@ sub createEvent {
     }
   } 
 
-  writeDebug("generated vevent ".$vevent->as_string());
+  _writeDebug("generated vevent ".$vevent->as_string());
   return $vevent;
 }
 
 ###############################################################################
 sub getField {
-  my ($meta, $name) = @_;
+  my ($this, $meta, $name) = @_;
 
   return unless $meta;
 
@@ -834,42 +622,15 @@ sub getField {
 }
 
 ###############################################################################
-sub getTopicTitle {
-  my ($meta) = @_;
+sub _inlineError {
+  return '<span class="foswikiAlert">'.$_[0].'</span>';
+}
 
-  my $web = $meta->web;
-  my $topic = $meta->topic;
-
-  if ($Foswiki::cfg{SecureTopicTitles}) {
-    my $wikiName = Foswiki::Func::getWikiName();
-    return $topic
-      unless Foswiki::Func::checkAccessPermission('VIEW', $wikiName, undef, $topic, $web, $meta);
-  }
-
-  # read the formfield value
-  my $title = $meta->get('FIELD', 'TopicTitle');
-  $title = $title->{value} if $title;
-
-  # read the topic preference
-  unless ($title) {
-    $title = $meta->get('PREFERENCE', 'TOPICTITLE');
-    $title = $title->{value} if $title;
-  }
-
-  # read the preference
-  unless ($title)  {
-    Foswiki::Func::pushTopicContext($web, $topic);
-    $title = Foswiki::Func::getPreferencesValue('TOPICTITLE');
-    Foswiki::Func::popTopicContext();
-  }
-
-  # default to topic name
-  $title ||= $topic;
-
-  $title =~ s/\s*$//;
-  $title =~ s/^\s*//;
-
-  return $title;
-} 
+###############################################################################
+sub _writeDebug {
+  my $msg = shift;
+  chomp($msg);
+  print STDERR "ICalPlugin::Core - $msg\n" if TRACE;
+}
 
 1;

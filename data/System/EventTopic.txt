@@ -1,5 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" comment="autosave" date="1356278771" format="1.1" version="6"}%
-%META:TOPICPARENT{name="WebHome"}%
+%META:TOPICINFO{author="micha" comment="autosave" date="1475302829" format="1.1" version="8"}%
 ---+!! %TOPIC%
 
 <noautolink>
@@ -25,14 +24,17 @@ Not supported yet:
 -->
 
 <verbatim>
-%STARTSECTION{"init"}%
+%STARTSECTION{"init"}%%ADDTOZONE{"script" id="%TOPIC%" section="init::js"}%%ADDTOZONE{"head" id="%TOPIC%" section="init:css"}%%ENDSECTION{"init"}%
+%STARTSECTION{"init::css"}%
 <literal>
-<style>
+<style type='text/css">
 .Interval, WeekDay, MonthDay, Month, Exception, YearDay {
   display:none;
 }
 </style>
-<script>
+%ENDSECTION{"init:css"}%
+%STARTSECTION{"init::js"}%
+<script type='text/javascript'>
 jQuery(function($) {
 
   $(".event").livequery(function() {
@@ -78,5 +80,5 @@ jQuery(function($) {
 });
 </script>
 </literal>
-%ENDSECTION{"init"}%
+%ENDSECTION{"init::js"}%
 </verbatim>
