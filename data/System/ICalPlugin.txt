@@ -55,6 +55,8 @@ An example is provided in the Sandbox.ICalHolidayListDemo.
 =%<nop>FORMATICAL{...}%=
 
 | *Parameter* | *Description* | *Default* |
+| url | fetch ical data from the given url | |
+| text | specifies ical data inline | |
 | topic | specifies the topic where to read the ical attachment file from | %<nop>BASETOPIC% |
 | attachment | the name of an ical calendar file attached to the topic specified in the =topic= parameter | calendar.ics |
 | raw | if set to =on= the selected result is returned in raw ical format | off |
@@ -71,6 +73,8 @@ An example is provided in the Sandbox.ICalHolidayListDemo.
 | footer | format string appended to the result when any event data has been found within the specified time span| | 
 | separator | format string used to separate event records while formating them | |
 
+Only one of the sources may be specified in either =url=, =text= or =topic= / =attachment= (precedence in the given order).
+
 The format string parameters =format=, =eventformat= and =rangeformat= can take a range of variables to refer to properties of the event record about
 to be rendered. These are:
 
@@ -84,6 +88,11 @@ to be rendered. These are:
    * $attendee
    * $organizer
    * $summary
+
+Properties, i.e. those that may return multi-line results such as =$description= and =$summary=, may be expanded using =$plainify(&lt;key>)=.
+This will fetch the value of the given key and "plainify" it in a way that they may be used in TML table markup where cells must not contain
+multi-line values as that would break table markup.
+
 
 Create, modified, start and end time properties of an ical event can be formatted in more detail using
 the following variables within the =format= strings.
@@ -161,6 +170,12 @@ Finally, the standard foswiki escape variables are expanded:
 %$DEPENDENCIES%
 
 ---++ Change History
+%TABLE{columnwidths="7em" tablewidth="100%"}%
+|  26 Oct 2020 | return infinite values for missing start or end dates ... which fixes use of undefined values;\
+		 convert timezone information to local time; \
+		 fix multiple memory problems; \
+		 added parameters =url=, =text= and =$plainify()=; \
+		 fixed unicode encoding problems reading ics files |
 |  11 Jun 2018 | internal api rework |
 |  28 Aug 2014 | depend on !MetaDataPlugin >= 4.0 |
 |  07 Nov 2013 | fixed use of deprecated perl syntax in foreach loops |
@@ -174,7 +189,7 @@ Finally, the standard foswiki escape variables are expanded:
 
 %META:FORM{name="PackageForm"}%
 %META:FIELD{name="Author" title="Author" value="Michael Daum"}%
-%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2011-2018 Michael Daum http://michaeldaumconsulting.com"}%
+%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2011-2020 Michael Daum"}%
 %META:FIELD{name="Description" title="Description" value="%25$SHORTDESCRIPTION%25"}%
 %META:FIELD{name="Home" title="Home" value="Foswiki:Extensions/%TOPIC%"}%
 %META:FIELD{name="License" title="License" value="[[http://www.gnu.org/licenses/gpl.html][GPL (Gnu General Public License)]]"}%

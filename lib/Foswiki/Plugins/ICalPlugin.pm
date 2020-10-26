@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2018 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2020 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,8 @@ use warnings;
 
 use Foswiki::Func ();
 
-our $VERSION = '2.00';
-our $RELEASE = '11 Jun 2018';
+our $VERSION = '3.00';
+our $RELEASE = '26 Oct 2020';
 our $SHORTDESCRIPTION = 'Access ical data in wikiapps';
 our $NO_PREFS_IN_TOPIC = 1;
 our $core;
@@ -57,13 +57,15 @@ sub initPlugin {
     );
   }
 
-  Foswiki::Func::registerRESTHandler('purgeCache', sub { return getCore()->purgeCache(@_); },
+  Foswiki::Func::registerRESTHandler(
+    'purgeCache', sub { return getCore()->purgeCache(@_); },
     authenticate => 1,
     validate => 0,
     http_allow => 'GET,POST',
   );
 
-  Foswiki::Func::registerRESTHandler('clearCache', sub { return getCore()->clearCache(@_); },
+  Foswiki::Func::registerRESTHandler(
+    'clearCache', sub { return getCore()->clearCache(@_); },
     authenticate => 1,
     validate => 0,
     http_allow => 'GET,POST',

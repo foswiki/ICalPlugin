@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2018 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2020 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -28,17 +28,16 @@ use DateTime::Format::ICal ();
 use DateTime::Span ();
 use Data::ICal::Entry::Event ();
 use Error qw(:try);
+use Encode ();
 
-use constant TRACE => 0; # toggle me
+use constant TRACE => 0;    # toggle me
 #use Data::Dump qw(dump);
 
 ###############################################################################
 sub new {
   my $class = shift;
 
-  my $this = bless({
-    @_
-  }, $class);
+  my $this = bless({@_}, $class);
 
   return $this;
 }
@@ -59,7 +58,7 @@ sub FORMATICAL {
 
   ($web, $topic) = Foswiki::Func::normalizeWebTopicName($web, $topic);
 
-  return _inlineError("topic $web.$topic does not exist") 
+  return _inlineError("topic $web.$topic does not exist")
     unless Foswiki::Func::topicExists($web, $topic);
 
   my $error;
@@ -72,13 +71,13 @@ sub FORMATICAL {
 
   if (defined $url) {
     # get calendar from url
-    my $data;
     try {
       $cal->getDataFromUrl($url, $expire);
-    } catch Error::Simple with {
-      $error = shift->{-text};
     }
-  } elsif (defined $text) { 
+    catch Error::Simple with {
+      $error = "ERROR fetching data from url: " . shift->{-text};
+    }
+  } elsif (defined $text) {
     # get calendar from inline text
     $cal->parseData($text, undef, $expire);
   } else {
@@ -88,13 +87,14 @@ sub FORMATICAL {
 
     try {
       $text = Foswiki::Func::readAttachment($web, $topic, $attachment);
-    } catch Foswiki::AccessControlException with {
-      $error = shift->{-text};
+      $text = Encode::decode_utf8($text);
+    }
+    catch Foswiki::AccessControlException with {
+      $error = "ERROR reading data from attachment: " . shift->{-text};
     };
 
     unless (defined $error) {
-      my $data = Foswiki::Func::readAttachment($web, $topic, $attachment);
-      $cal->parseData($data, "$web.$topic.$attachment", $expire);
+      $cal->parseData($text, "$web.$topic.$attachment", $expire);
     }
   }
   return _inlineError($error) if defined $error;
@@ -104,8 +104,7 @@ sub FORMATICAL {
 
   my $querySpan = $this->getQuerySpan($params);
   my @events = $cal->getEvents($querySpan);
-  _writeDebug("### parsed ".scalar(@events)." events");
-
+  _writeDebug("### parsed " . scalar(@events) . " events");
 
   # sort events
   my $sortCrit;
@@ -114,15 +113,15 @@ sub FORMATICAL {
     $sortCrit = 'start';
   } elsif ($theSort eq 'end') {
     $sortCrit = 'end';
-#  } elsif ($theSort eq 'modified') {
-#    $sortCrit = '_modifiedepoch';
-#  } elsif ($theSort eq 'created') {
-#    $sortCrit = '_createdepoch';
+    #  } elsif ($theSort eq 'modified') {
+    #    $sortCrit = '_modifiedepoch';
+    #  } elsif ($theSort eq 'created') {
+    #    $sortCrit = '_createdepoch';
   } else {
     $theSort = 'off';
   }
   unless ($theSort eq 'off') {
-    @events = sort {($a->{$sortCrit}||0) <=> ($b->{$sortCrit}||0)} @events;
+    @events = sort { ($a->{$sortCrit} || 0) <=> ($b->{$sortCrit} || 0) } @events;
   }
 
   my @result = ();
@@ -131,10 +130,10 @@ sub FORMATICAL {
   foreach my $event (@events) {
     $index++;
 
-    _writeDebug("### $index: summary=$event->{summary}, start=".$event->start.", end=".$event->end) if TRACE;
+    _writeDebug("### $index: summary=$event->{summary}, start=" . $event->start . ", end=" . $event->end) if TRACE;
     next unless $index > $skip;
-    last if $limit && $index > $skip+$limit;
- 
+    last if $limit && $index > $skip + $limit;
+
     my $line = $event->format($params);
     #print STDERR "line=$line\n";
 
@@ -148,11 +147,12 @@ sub FORMATICAL {
     # clean up
     $line =~ s/\$index/$index/g;
     $line =~ s/\$(?:location|dtstart|start|dtend|until|end|last-modified|modified|description|attendee|organizer|rrule|rdate|summary)//g;
+    $line =~ s/\$plainify\(.*?\)//g;
     $line =~ s/\$[mec]?(seco?n?d?s?|minu?t?e?s?|hour?s?|day|w(eek|day)|dow|mo(?:nt?h?)?|ye(?:ar)?)//g;
 
     push @result, $line;
   }
-  _writeDebug("### extracted ".scalar(@result)." events");
+  _writeDebug("### extracted " . scalar(@result) . " events");
 
   return '' unless @result;
 
@@ -161,7 +161,7 @@ sub FORMATICAL {
   my $theSeparator = $params->{separator};
   $theSeparator = '$n' unless defined $theSeparator;
 
-  my $result = $theHeader.join($theSeparator, @result).$theFooter;
+  my $result = $theHeader . join($theSeparator, @result) . $theFooter;
 
   $result =~ s/\$n/\n/g;
   $result =~ s/\$perce?nt/\%/g;
@@ -186,15 +186,15 @@ sub parseTime {
   # deal with 20111224
   if ($time =~ /^(\d\d\d\d)(\d\d)(\d\d)$/) {
     $time = "$1-$2-$3";
-  } 
-  
+  }
+
   # deal with 20111224T1200000
   elsif ($time =~ /^(\d\d\d\d)(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)(Z.*?)$/) {
     $time = "$1-$2-$3T$4:$5:$6$7";
   }
 
   my $result = Foswiki::Time::parseTime($time);
-  
+
   unless (defined $result) {
     Foswiki::Func::writeWarning("ICalPlugin::Core - cant parse time '$time'");
     $result = 0;
@@ -208,7 +208,7 @@ sub getQuerySpan {
   my ($this, $params) = @_;
 
   my $theStart = $params->{start};
-  my $dtStart = DateTime->from_epoch(epoch => (defined $theStart)?parseTime($theStart):time);
+  my $dtStart = DateTime->from_epoch(epoch => (defined $theStart) ? parseTime($theStart) : time);
 
   my $theSpan = $params->{span} || '1 month';
   my $theEnd = $params->{end};
@@ -246,8 +246,8 @@ sub getQuerySpan {
   #_writeDebug("query span: start=".$dtStart.", end=".$dtEnd) if TRACE;
 
   return DateTime::Span->from_datetimes(
-    start=>$dtStart,
-    end=>$dtEnd
+    start => $dtStart,
+    end => $dtEnd
   );
 }
 
@@ -272,7 +272,8 @@ sub afterSaveHandler {
   if (@events) {
     try {
       $this->updateCalendar(\@events);
-    } catch Error::Simple with {
+    }
+    catch Error::Simple with {
       my $error = shift;
       print STDERR "ERROR: can't update calendar - " . $error . "\n";
     }
@@ -310,27 +311,24 @@ sub updateCalendar {
   }
 
   my $newCal = Data::ICal->new(
-      data => 
-"BEGIN:VCALENDAR
+    data => "BEGIN:VCALENDAR
 PRODID:-//Foswiki///ICalPlugin//$Foswiki::Plugins::ICalPlugin::RELEASE
 VERSION:2.0
 END:VCALENDAR
 "
   );
 
-
-
   if (Foswiki::Func::attachmentExists($calendarWeb, $calendarTopic, $calendarAttachment)) {
     my $data = Foswiki::Func::readAttachment($calendarWeb, $calendarTopic, $calendarAttachment);
     if ($data) {
-      $data = Foswiki::Sandbox::untaintUnchecked($data); # SMELL: some libs barf on tainted strings
+      $data = Foswiki::Sandbox::untaintUnchecked($data);    # SMELL: some libs barf on tainted strings
 
-      my $oldCal = Data::ICal->new(data => $data); # SMELL: do we still need this wrapper?
+      my $oldCal = Data::ICal->new(data => $data);          # SMELL: do we still need this wrapper?
 
       if (ref($oldCal) eq 'Class::ReturnValue') {
-        print STDERR "ERROR:" . $oldCal->error_message . "\n"; # ERROR ... but keep on going
+        print STDERR "ERROR:" . $oldCal->error_message . "\n";    # ERROR ... but keep on going
       } else {
-        foreach my $entry (@{ $oldCal->entries() }) {
+        foreach my $entry (@{$oldCal->entries()}) {
           next unless $entry->ical_entry_type() eq 'VEVENT';
           my $uid = $entry->property("uid")->[0]->value;
           unless ($knownUID{$uid}) {
@@ -350,16 +348,21 @@ END:VCALENDAR
   my $data = $newCal->as_string;
   open(my $fh, '<', \$data) or die $!;
 
-  Foswiki::Func::saveAttachment($calendarWeb, $calendarTopic, $calendarAttachment, {
-    filesize => length($data),
-    stream => $fh
-    #SMELL: attachment attributes are lost when saving again (comments, hide, ...)
-  });
+  Foswiki::Func::saveAttachment(
+    $calendarWeb,
+    $calendarTopic,
+    $calendarAttachment,
+    {
+      filesize => length($data),
+      stream => $fh
+        #SMELL: attachment attributes are lost when saving again (comments, hide, ...)
+    }
+  );
 
   close $fh;
 
   #print STDERR "cal=".dump($newCal)."\n";
-  return 1; # success
+  return 1;    # success
 }
 
 ###############################################################################
@@ -372,7 +375,7 @@ sub getCalendarAttachment {
 
     #throw Error::Simple("ICALPLUGIN_CALENDAR not defined") unless $calendar;
     return unless $calendar;
-    
+
     if ($calendar =~ /^($Foswiki::regex{webNameRegex})\.($Foswiki::regex{topicNameRegex})\.(.*?)$/) {
       $this->{calendarWeb} = $1;
       $this->{calendarTopic} = $2;
@@ -386,7 +389,6 @@ sub getCalendarAttachment {
 
   return ($this->{calendarWeb}, $this->{calendarTopic}, $this->{calendarAttachment});
 }
-
 
 ###############################################################################
 sub getEventFromDataForm {
@@ -427,7 +429,7 @@ sub getEventFromMetaData {
   my ($this, $web, $topic, $record) = @_;
 
   $web =~ s/\//./g;
-  my $uid = $web.'.'.$topic.'#'.$record->{name};
+  my $uid = $web . '.' . $topic . '#' . $record->{name};
 
   my $event = $this->createEvent(
 
@@ -461,7 +463,7 @@ sub getEventsFromMetaData {
   # so we have to break data encapsulation of Foswiki::Meta
   while (my ($alias, $name) = each %Foswiki::Meta::aliases) {
     $name =~ s/^META://;
-   
+
     # SMELL: there's no way to access the meta data definition record for
     # a given key
     my $metaDataDef = $Foswiki::Meta::VALIDATE{$name};
@@ -480,7 +482,8 @@ sub getEventsFromMetaData {
     my $form;
     try {
       $form = new Foswiki::Form($Foswiki::Plugins::SESSION, $formWeb, $formTopic);
-    } catch Foswiki::AccessControlException with {
+    }
+    catch Foswiki::AccessControlException with {
       # catch but simply bail out
       _writeDebug("access exception reading $formWeb.$formTopic");
     };
@@ -520,15 +523,15 @@ sub createEvent {
     $event{dtstart} = DateTime->from_epoch(epoch => parseTime($params{start}));
 
     my $icalStart = DateTime::Format::ICal->format_datetime($event{dtstart});
-    $icalStart =~ s/T.*//; # strip of time
-    $vevent->add_properties('dtstart' => [ $icalStart, { VALUE => 'DATE' } ]);
+    $icalStart =~ s/T.*//;    # strip of time
+    $vevent->add_properties('dtstart' => [$icalStart, {VALUE => 'DATE'}]);
   }
 
   if ($params{end}) {
     $event{dtend} = DateTime->from_epoch(epoch => parseTime($params{end}));
     my $icalEnd = DateTime::Format::ICal->format_datetime($event{dtend});
-    $icalEnd =~ s/T.*//; # strip of time
-    $vevent->add_properties('dtend' => [ $icalEnd, { VALUE => 'DATE' } ]);
+    $icalEnd =~ s/T.*//;      # strip of time
+    $vevent->add_properties('dtend' => [$icalEnd, {VALUE => 'DATE'}]);
   }
 
   # other datetime properties
@@ -536,13 +539,13 @@ sub createEvent {
     my $val = $params{$prop};
     next unless defined $val;
     $val = DateTime->from_epoch(epoch => parseTime($params{$prop}));
-    $vevent->add_properties($prop=>$val);
+    $vevent->add_properties($prop => $val);
   }
 
   # optional unique
   foreach my $prop (qw(location organizer priority recurrence-id sequence status transp uid url)) {
     my $val = $params{$prop};
-    $vevent->add_properties($prop=>$val) if defined $val;
+    $vevent->add_properties($prop => $val) if defined $val;
   }
 
   # optional repeatable
@@ -584,10 +587,11 @@ sub createEvent {
     my $error;
 
     try {
-      $set = DateTime::Event::ICal->recur(%event); # needs DateTimes
-    } catch Error::Simple with {
+      $set = DateTime::Event::ICal->recur(%event);    # needs DateTimes
+    }
+    catch Error::Simple with {
       $error = shift;
-      print STDERR "ERROR: ".$error."\n";
+      print STDERR "ERROR: " . $error . "\n";
     };
 
     unless ($error) {
@@ -598,14 +602,14 @@ sub createEvent {
           $vevent->add_properties(rrule => $recurr);
         } elsif ($recurr =~ s/^RDATE://) {
           foreach my $rdate (split(/,/, $recurr)) {
-            $vevent->add_properties(rdate => [ $rdate, { VALUE => 'DATE' } ]);
+            $vevent->add_properties(rdate => [$rdate, {VALUE => 'DATE'}]);
           }
         }
       }
     }
-  } 
+  }
 
-  _writeDebug("generated vevent ".$vevent->as_string());
+  _writeDebug("generated vevent " . $vevent->as_string());
   return $vevent;
 }
 
@@ -623,7 +627,7 @@ sub getField {
 
 ###############################################################################
 sub _inlineError {
-  return '<span class="foswikiAlert">'.$_[0].'</span>';
+  return '<span class="foswikiAlert">' . $_[0] . '</span>';
 }
 
 ###############################################################################

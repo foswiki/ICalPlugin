@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="micha" comment="autosave" date="1475302829" format="1.1" version="8"}%
+%META:TOPICINFO{author="ProjectContributor" comment="autosave" date="1475302829" format="1.1" version="1"}%
 ---+!! %TOPIC%
 
 <noautolink>
@@ -27,14 +27,14 @@ Not supported yet:
 %STARTSECTION{"init"}%%ADDTOZONE{"script" id="%TOPIC%" section="init::js"}%%ADDTOZONE{"head" id="%TOPIC%" section="init:css"}%%ENDSECTION{"init"}%
 %STARTSECTION{"init::css"}%
 <literal>
-<style type='text/css">
+<style>
 .Interval, WeekDay, MonthDay, Month, Exception, YearDay {
   display:none;
 }
 </style>
 %ENDSECTION{"init:css"}%
 %STARTSECTION{"init::js"}%
-<script type='text/javascript'>
+<script>
 jQuery(function($) {
 
   $(".event").livequery(function() {

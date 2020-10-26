@@ -2,13 +2,12 @@
 # ---++ ICalPlugin
 # This is the configuration used by the <b>ICalPlugin</b>.
 
-# **BOOLEAN**
-$Foswiki::cfg{ICalPlugin}{Flag} = 1;
+# **STRING LABEL="Cache Expiration"**
+# Expiration time when fetching and caching exchange rates from the provider.
+$Foswiki::cfg{ICalPlugin}{CacheExpire} = '1 d';
 
-# **STRING**
-$Foswiki::cfg{ICalPlugin}{String} = '';
-
-# **SELECT foo,bar**
-$Foswiki::cfg{ICalPlugin}{Select} = 'foo';
+# **NUMBER**
+# Network timeout in seconds talking to the rates provider API.
+$Foswiki::cfg{ICalPlugin}{Timeout} = 5;
 
 1;

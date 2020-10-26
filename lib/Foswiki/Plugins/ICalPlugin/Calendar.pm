@@ -1,6 +1,6 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# ICalPlugin is Copyright (C) 2011-2018 Michael Daum http://michaeldaumconsulting.com
+# ICalPlugin is Copyright (C) 2011-2020 Michael Daum http://michaeldaumconsulting.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -23,7 +23,6 @@ use Foswiki::Plugins::ICalPlugin::Event ();
 use Error qw(:try);
 use Digest::MD5 ();
 use Cache::FileCache ();
-use Encode ();
 use DateTime::Span ();
 use DateTime::Set ();
 use DateTime::Format::ICal ();
@@ -39,7 +38,7 @@ use Data::ICal::Entry::TimeZone::Daylight ();
 use Data::ICal::Entry::TimeZone::Standard ();
 # end SMELL
 
-use constant TRACE => 0; # toggle me
+use constant TRACE => 0;    # toggle me
 #use Data::Dump qw(dump);
 
 ###############################################################################
@@ -47,14 +46,25 @@ sub new {
   my $class = shift;
 
   my $this = bless({
-    cacheExpire => $Foswiki::cfg{ICalPlugin}{CacheExpire} || '1 d',
-    cacheDir => Foswiki::Func::getWorkArea('ICalPlugin').'/cache',
-    timeout => $Foswiki::cfg{ICalPlugin}{TimeOut} || 10,
-    agent => $Foswiki::cfg{ICalPlugin}{Agent} || 'Mozilla/5.0',
-    @_
-  }, $class);
+      cacheExpire => $Foswiki::cfg{ICalPlugin}{CacheExpire} || '1 d',
+      cacheDir => Foswiki::Func::getWorkArea('ICalPlugin') . '/cache',
+      timeout => $Foswiki::cfg{ICalPlugin}{TimeOut} || 10,
+      agent => $Foswiki::cfg{ICalPlugin}{Agent} || 'Mozilla/5.0',
+      @_
+    },
+    $class
+  );
 
   return $this;
+}
+
+###############################################################################
+sub DESTROY {
+  my $this = shift;
+
+  undef $this->{_cache};
+  undef $this->{_client};
+  undef $this->{_ical};
 }
 
 ###############################################################################
@@ -79,14 +89,14 @@ sub getEvents {
       next;
     }
 
-    _writeDebug("### $index - ".$event->stringify) if TRACE;
+    _writeDebug("### $index - " . $event->stringify) if TRACE;
     #_writeDebug($entry->as_string) if TRACE;
 
     my $recs = $event->unfoldRecurrences($span, $exceptions);
-    if ($recs)  {
+    if ($recs) {
       _writeDebug("   -> adding recurrences");
       foreach my $recEvent (@$recs) {
-        _writeDebug("   -> ".$recEvent->stringify);
+        _writeDebug("   -> " . $recEvent->stringify);
         push @events, $recEvent;
       }
     } else {
@@ -130,7 +140,8 @@ sub getExceptions {
     my $uid = $event->getPropertyValue("uid");
     #print "### exception for $uid - " . $event->summary."\n";
 
-    push @{$exceptions{$uid}}, {
+    push @{$exceptions{$uid}},
+      {
       replace => $rec->set(
         hour => 0,
         minute => 0,
@@ -138,7 +149,7 @@ sub getExceptions {
         nanosecond => 0
       ),
       event => $event,
-    };
+      };
   }
 
   return \%exceptions;
@@ -163,7 +174,7 @@ sub parseData {
   if ($ical) {
     _writeDebug("found ical $key in cache");
   } else {
-    $ical = Data::ICal->new(data=>$data);
+    $ical = Data::ICal->new(data => $data);
     _writeDebug("caching ical for $key");
     $this->_cache->set($key, $ical, $expire);
   }
@@ -176,15 +187,7 @@ sub getDataFromUrl {
   my ($this, $url, $expire) = @_;
 
   my $data = $this->_getExternalResource($url, $expire);
-  return $this->parseData($data, $url.'::ICAL', $expire);
-}
-
-###############################################################################
-sub finish {
-  my $this = shift;
-
-  undef $this->{cache};
-  undef $this->{client};
+  return $this->parseData($data, $url . '::ICAL', $expire);
 }
 
 ###############################################################################
@@ -204,19 +207,19 @@ sub _getExternalResource {
     _writeDebug("found content for $url in cache contentType=$contentType");
   }
 
-  unless (defined $content) { 
+  unless (defined $content) {
     my $client = $this->_client;
     my $res = $client->get($url);
 
-    throw Error::Simple("error fetching url") 
+    throw Error::Simple("error fetching url")
       unless $res;
 
     unless ($res->is_success) {
-      _writeDebug("url=$url, http error=".$res->status_line);
-      throw Error::Simple("http error fetching url: ".$res->code." - ".$res->status_line);
+      _writeDebug("url=$url, http error=" . $res->status_line);
+      throw Error::Simple("http error fetching url: " . $res->code . " - " . $res->status_line);
     }
 
-    _writeDebug("http status=".$res->status_line);
+    _writeDebug("http status=" . $res->status_line);
 
     $content = $res->decoded_content();
     $contentType = $res->header('Content-Type');
@@ -246,20 +249,21 @@ sub _cache {
   my $this = shift;
 
   unless ($this->{cache}) {
-    $this->{cache} = new Cache::FileCache({
-      default_expires_in => $this->{cacheExpire},
-      cache_root 	=> $this->{cacheDir},
-      directory_umask => 077,
-    });
+    $this->{_cache} = new Cache::FileCache({
+        default_expires_in => $this->{cacheExpire},
+        cache_root => $this->{cacheDir},
+        directory_umask => 077,
+      }
+    );
   }
 
-  return $this->{cache};
+  return $this->{_cache};
 }
 
 sub _client {
   my $this = shift;
 
-  unless (defined $this->{client}) {
+  unless (defined $this->{_client}) {
     require LWP::UserAgent;
     my $ua = LWP::UserAgent->new;
     $ua->timeout($this->{timeout});
@@ -274,7 +278,7 @@ sub _client {
 
     my $proxy = $Foswiki::cfg{PROXY}{HOST};
     if ($proxy) {
-      $ua->proxy([ 'http', 'https' ], $proxy);
+      $ua->proxy(['http', 'https'], $proxy);
 
       my $proxySkip = $Foswiki::cfg{PROXY}{NoProxy};
       if ($proxySkip) {
@@ -287,10 +291,10 @@ sub _client {
       verify_hostname => 0,    # SMELL
     );
 
-    $this->{client} = $ua;
+    $this->{_client} = $ua;
   }
 
-  return $this->{client}
+  return $this->{_client};
 }
 
 ###############################################################################
